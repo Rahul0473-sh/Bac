@@ -9,7 +9,7 @@ app.use(express.json({ limit: "16kb" })); // Now parser does'nt require for this
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser()); // cookies access from user's browser
-app.use(express.json);
+app.use(express.json());
 
 import userRouter from "./routes/user.router.js";
 // router declartion
