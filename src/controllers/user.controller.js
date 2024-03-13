@@ -22,7 +22,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const existedUser = Users.findOne({
+  const existedUser = await Users.findOne({
     $or: [{ username }, { email }], //to check multiple variable
   });
 
@@ -31,7 +31,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
   const avatarlocalpath = req.files?.avatar[0].path;
   const coverImagelocalpath = req.files?.coverImage[0].path;
-  console.log("req files", req.files);
+
   // Now upload on Cloudinary
   if (!avatarlocalpath) {
     throw new ApiError(400, "Avatar file is required");
@@ -49,7 +49,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     avatar: avatar.url,
     coverImage: coverImage.url || "",
     password,
-    email
+    email,
   });
 
   // here i have to check that is that is it uploaded on mongodb
