@@ -42,7 +42,6 @@ const users_schema = new mongoose.Schema(
     },
     refreshToken: {
       type: String,
-      required: true,
     },
   },
   { timestamps: true }
@@ -50,7 +49,7 @@ const users_schema = new mongoose.Schema(
 
 users_schema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 10);
+  this.password = await bcrypt.hash(this.password, 10); // This password we will get from saved password
 });
 users_schema.methods.isPassWordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
@@ -59,7 +58,7 @@ users_schema.methods.isPassWordCorrect = async function (password) {
 users_schema.methods.genrateAccessToken = async function () {
   jwt.sign(
     {
-      _id: this._id,
+      _id: this._id, // this will also point to current schema id
       email: this.email,
       username: this.username,
       fullName: this.fullName,

@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
-import { upload } from "../middlewares/multer.middleware.js";
+import { loginUser, logoutUser, registerUser } from "../controllers/user.controller.js";
+import { upload } from "../middlewares/multer.middleware.js"; // this is the multer middleware
+import VerifyJwt from "../middlewares/auth.middleware.js";
 
 const router = Router();
 router.route("/registers").post(upload.fields([
@@ -14,4 +15,6 @@ router.route("/registers").post(upload.fields([
     }
 ]), registerUser); //i have toupload file overhere for that im gonna use multer
 
+router.route("/login").post(loginUser);
+router.route("/logout").post(VerifyJwt, logoutUser);
 export default router;

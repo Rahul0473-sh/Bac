@@ -25,7 +25,6 @@ export const registerUser = asyncHandler(async (req, res) => {
   const existedUser = await Users.findOne({
     $or: [{ username }, { email }], //to check multiple variable
   });
-
   if (existedUser) {
     throw new ApiError(409, "User already Existed with username or email");
   }
@@ -41,7 +40,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   const coverImage = await uploadOnCloudinary(coverImagelocalpath);
 
   if (!avatar) {
-    throw new ApiError(400, "Avatar file is required");
+    throw new ApiError(400, "Avatar url is not achived");
   }
   const user = await Users.create({
     fullName,
@@ -63,4 +62,99 @@ export const registerUser = asyncHandler(async (req, res) => {
   return res
     .status(201)
     .json(new ApiResponse(200, createdUser, "User register Successfully"));
+});
+
+const genrateAccessTokenandRefreshToken = (userid) => {
+  try {
+    const user = Users.findById(userid);
+    const accessToken = user.genrateAccessToken();
+    const refreshToken = user.genrateRefreshToken();
+
+    // Now im storing the refresh Token and sending the accessToken to the User
+    //syntax to update object of mongodb
+    user.refreshToken = refreshToken;
+    // when i update the this rest of all the object allso kicksin
+
+    user.save({ validateBeforeSave: false }); // so it will helps
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "something went wrong while Genrating refreshtoken and accessToken"
+    );
+  }
+};
+
+export const loginUser = asyncHandler(async (req, res) => {
+  //some steps
+  //1 getdata form req.body, 2) check the user or email present, 3)check password
+  //4)genrate refresh token,access token 5)send in cookies 6)
+
+  const { password, username, email } = req.body;
+  if (!(username || email)) {
+    throw new ApiError(400, "Username or Email is required");
+  }
+  const user = await Users.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (!user) {
+    throw new ApiError(400, "User is not registerd");
+  }
+  const isPassWordCorrect = user.isPassWordCorrect(password);
+  if (!isPassWordCorrect) {
+    throw new ApiError(401, "User credidential's are wrong");
+  }
+  // genrate access token and refresh token
+
+  const { accessToken, refreshToken } = await genrateAccessTokenandRefreshToken(
+    user._id
+  );
+  const loggedinUser = Users.findById(user._id).select(
+    "-password, -refreshToken"
+  );
+  // send cookies
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  res
+    .status(200)
+    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: loggedinUser,
+          accessToken,
+          refreshToken,
+        },
+        "User Logged in Succesfully"
+      )
+    );
+});
+export const logoutUser = asyncHandler(async (req, res) => {
+  // Now i have to add my middleware so that i can get access just like req.cookie
+  await Users.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: undefined,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200,{},"User logged Out SuccessFully"));
 });
