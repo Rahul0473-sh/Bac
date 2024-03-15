@@ -11,7 +11,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   // check if user already exist ->email,password
   // check for images check for avatar
   // upload them to cloudinary
-  //creater user object /
+  //creater user object
   // remove passowrd and refresh token from password,
   // check for usercreation
   //return for user createino
@@ -65,16 +65,16 @@ export const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdUser, "User register Successfully"));
 });
 
-const genrateAccessTokenandRefreshToken = (userid) => {
+const genrateAccessTokenandRefreshToken = async (userid) => {
   try {
-    const user = Users.findById(userid);
+    const user = await Users.findById(userid);
     const accessToken = user.genrateAccessToken();
     const refreshToken = user.genrateRefreshToken();
 
     // Now im storing the refresh Token and sending the accessToken to the User
     //syntax to update object of mongodb
     user.refreshToken = refreshToken;
-    // when i update the this rest of all the object allso kicksin
+    // when i update  this, rest of all the object allso kicksin
 
     user.save({ validateBeforeSave: false }); // so it will helps
 
@@ -103,7 +103,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(400, "User is not registerd");
   }
-  const isPassWordCorrect = user.isPassWordCorrect(password);
+  const isPassWordCorrect = user.isPassWordCorrect(password); // injected method can use only by instace of model
   if (!isPassWordCorrect) {
     throw new ApiError(401, "User credidential's are wrong");
   }
