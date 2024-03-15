@@ -29,6 +29,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   if (existedUser) {
     throw new ApiError(409, "User already Existed with username or email");
   }
+  console.log(req.files);
   const avatarlocalpath = req.files?.avatar[0].path;
   const coverImagelocalpath = req.files?.coverImage[0].path;
 
@@ -198,4 +199,98 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new ApiError(401, error?.message || "Invalid refresh Token");
   }
+});
+
+export const changeCurrentUserPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  // Remember that i will add middleware in this route
+  const user = await Users.findById(req.user?._id);
+
+  const isPassWordCorrect = await user.isPassWordCorrect(oldPassword);
+
+  if (!isPassWordCorrect) {
+    throw new ApiError(400, "old Password isn't correct");
+  }
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: true });
+
+  return res.status(200).json(ApiResponse(200, {}, "Password is changed"));
+});
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(ApiResponse(200, req.user, "User information fetched SuccessFully"));
+});
+export const upadateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullName, username } = req.body;
+  if (!fullName || !username) {
+    throw new ApiResponse(400, "All fields are required");
+  }
+  const user = await Users.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        fullName: fullName,
+        email: email,
+      },
+    },
+    {
+      new: true, // it will return you the update value in the object
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(ApiResponse(200, user, "UserName and fullName changed Successfully"));
+});
+
+export const updateAvatar = asyncHandler(async (req, res) => {
+  const avatarlocalpath = req.file?.path;
+  if (!avatarlocalpath) {
+    throw new ApiError(400, "File isn't recived");
+  }
+  const avatar = await uploadOnCloudinary(avatarlocalpath);
+  if (!avatar.url) {
+    throw new ApiError(400, "Error while uploading on Cloudinary");
+  }
+ const user=await Users.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        avatar: avatar.url,
+      },
+    },
+    {
+      new: true
+    }
+  ).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(ApiResponse(200, user, "Avatar file changed successFully"));
+});
+export const updateCoverImage = asyncHandler(async (req, res) => {
+  const coverImagelocalpath = req.file?.path;
+  if (!coverImagelocalpath) {
+    throw new ApiError(400, "File isn't recived");
+  }
+  const coverImage = await uploadOnCloudinary(coverImagelocalpath);
+  if (!avatar.url) {
+    throw new ApiError(400, "Error while uploading on Cloudinary");
+  }
+  const user = await Users.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        coverImage: coverImage.url,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(ApiResponse(200, user, "coverImage file changed successFully"));
 });
