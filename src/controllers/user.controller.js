@@ -253,7 +253,7 @@ export const updateAvatar = asyncHandler(async (req, res) => {
   if (!avatar.url) {
     throw new ApiError(400, "Error while uploading on Cloudinary");
   }
- const user=await Users.findByIdAndUpdate(
+  const user = await Users.findByIdAndUpdate(
     req.user._id,
     {
       $set: {
@@ -261,7 +261,7 @@ export const updateAvatar = asyncHandler(async (req, res) => {
       },
     },
     {
-      new: true
+      new: true,
     }
   ).select("-password -refreshToken");
 
@@ -294,3 +294,69 @@ export const updateCoverImage = asyncHandler(async (req, res) => {
     .status(200)
     .json(ApiResponse(200, user, "coverImage file changed successFully"));
 });
+
+export const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+  if (!username?.trim) {
+    throw new ApiError(400, "Username is missing");
+  }
+  const channel=await Users.aggregate([
+    {
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "Subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedto",
+      },
+    },
+    {
+      $addFields: {
+        subsciberCount: {
+          $size: "$subscribers",
+        },
+        channelSubscribedToCount: {
+          $size: "$subscribedto",
+        },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        // it allows you to return limited values of objects
+        fullName: 1,
+        username: 1,
+        subsciberCount: 1,
+        channelSubscribedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+        email:1
+      },
+    },
+  ]);
+  if (!channel?.length) {
+    throw new ApiError(200,
+      ApiResponse(200, channel[0], "data fetched SuccessFully")
+    )
+  }
+});
+
